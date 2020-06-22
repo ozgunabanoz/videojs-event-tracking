@@ -19,8 +19,12 @@
  * @param    {Object} [config={}]
  *           An object of config left to the plugin author to define.
  */
-const PerformanceTracking = function(config) {
-  if (typeof config === 'undefined' || typeof config.performance !== 'function') {
+
+const PerformanceTracking = function (config) {
+  if (
+    typeof config === "undefined" ||
+    typeof config.performance !== "function"
+  ) {
     return;
   }
 
@@ -34,7 +38,7 @@ const PerformanceTracking = function(config) {
   let initialLoadTime = 0;
   let timestamps = [];
 
-  const reset = function() {
+  const reset = function () {
     seekCount = 0;
     pauseCount = 0;
     bufferCount = 0;
@@ -45,7 +49,7 @@ const PerformanceTracking = function(config) {
     timestamps = [];
   };
 
-  const trigger = function() {
+  const trigger = () => {
     const data = {
       pauseCount,
       seekCount,
@@ -53,33 +57,38 @@ const PerformanceTracking = function(config) {
       totalDuration,
       watchedDuration,
       bufferDuration,
-      initialLoadTime
+      initialLoadTime,
     };
 
     config.performance.call(player, data);
   };
 
-  const triggerAndReset = function() {
+  const triggerAndReset = function () {
+    clearInterval(timeInt);
     trigger();
     reset();
   };
 
-  if (typeof window.addEventListener === 'function') {
-    window.addEventListener('beforeunload', triggerAndReset);
-    player.on('dispose', function() {
-      window.removeEventListener('beforeunload', triggerAndReset);
+  const timeInt = setInterval(() => {
+    trigger();
+  }, config.interval);
+
+  if (typeof window.addEventListener === "function") {
+    window.addEventListener("beforeunload", triggerAndReset);
+    player.on("dispose", function () {
+      window.removeEventListener("beforeunload", triggerAndReset);
     });
   }
 
-  player.on('loadstart', function() {
+  player.on("loadstart", function () {
     if (totalDuration > 0) {
       trigger();
     }
     reset();
   });
-  player.on('ended', triggerAndReset);
-  player.on('dispose', triggerAndReset);
-  player.on('timeupdate', function() {
+  player.on("ended", triggerAndReset);
+  player.on("dispose", triggerAndReset);
+  player.on("timeupdate", function () {
     const curTime = +player.currentTime().toFixed(0);
 
     if (timestamps.indexOf(curTime) < 0) {
@@ -87,20 +96,20 @@ const PerformanceTracking = function(config) {
     }
     watchedDuration = timestamps.length;
   });
-  player.on('loadeddata', function(e, data) {
+  player.on("loadeddata", function (e, data) {
     totalDuration = +player.duration().toFixed(0);
   });
-  player.on('tracking:seek', function(e, data) {
+  player.on("tracking:seek", function (e, data) {
     seekCount = data.seekCount;
   });
-  player.on('tracking:pause', function(e, data) {
+  player.on("tracking:pause", function (e, data) {
     pauseCount = data.pauseCount;
   });
-  player.on('tracking:buffered', function(e, data) {
+  player.on("tracking:buffered", function (e, data) {
     ({ bufferCount } = data);
     bufferDuration = +(bufferDuration + data.secondsToLoad).toFixed(3);
   });
-  player.on('tracking:firstplay', function(e, data) {
+  player.on("tracking:firstplay", function (e, data) {
     initialLoadTime = data.secondsToLoad;
   });
 };
